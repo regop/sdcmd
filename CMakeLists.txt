@@ -1,0 +1,6 @@
+project(sdcmd)
+cmake_minimum_required(VERSION 2.6)
+set(CMAKE_C_FLAGS "-g -Wall")
+aux_source_directory(./ DIR_SRCS)
+add_executable(sdcmd ${DIR_SRCS})
+target_link_libraries(sdcmd m)
