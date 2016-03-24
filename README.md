@@ -1,0 +1,2 @@
+# sdcmd
+send sd cmd
