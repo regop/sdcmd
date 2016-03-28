@@ -1,10 +1,11 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include <stdbool.h>
-#include <stdint.h>
+#include <getopt.h>
 #include <linux/types.h>
 #include <asm/types.h>
 #include <sys/types.h>
@@ -69,11 +70,11 @@ int main(int argc, char *argv[])
         }
     }
 
-
+#if 0
     printf("cmd index string is %s\n", cmd_index_str);
     printf("args string is      %s\n", args_str);
     printf("blk_cnt string is   %s\n", blk_cnt_str);
-
+#endif
 
     if(argc < 2 || need_help)
     {
@@ -115,124 +116,29 @@ int main(int argc, char *argv[])
     
     dev_path =  argv[optind];
 
+#if 0
     printf("cmd index is %d\n", cmd_index);
     printf("args is      0x%08X\n", args);
     printf("blk_cnt is   %d\n", blk_cnt);
     printf("dev_path is  %s\n", dev_path);
+#endif
 
-    exit(0);
     switch(cmd_index)
     {
-        case MMC_SEND_EXT_CSD:
-            ret = read_ext_csd(dev_path);
-            break;
-            
-        case MMC_SWITCH:
-            ret = mmc_switch(dev_path,args);
-            break;
-            
-        case MMC_SEND_STATUS:
-            ret = mmc_send_status(dev_path, args);
-            break;
-            
-        case MMC_SELECT:
-            ret = mmc_select_device(dev_path, args);
-            break;
-            
-        case MMC_SEND_CSD:
-            ret = mmc_send_csd(dev_path, args);
-            break;
-            
-        case MMC_SEND_CID:
-            ret = mmc_send_cid(dev_path, args);
+        case SD_CMD_READ_SINGLE_BLK:
+            ret = sd_read_single_block(dev_path, args, output_file_path);
             break;
 
-        case MMC_SLEEP_AWAKE:
-            ret = mmc_sleep_awake(dev_path, args);
+        case SD_CMD_READ_MULTIPLE_BLK:
+            ret = sd_read_multiple_block(dev_path, args, blk_cnt, output_file_path);
             break;
 
-        case MMC_GO_IDLE:
-            ret = mmc_go_idle_state(dev_path, args);
-            break;
-            
-        case MMC_SEND_OP_COND:
-            ret = mmc_send_op_cond(dev_path, args);
+        case SD_CMD_SEND_STAT:
+            ret = sd_send_status(dev_path, args);
             break;
 
-        case MMC_ALL_SEND_CID:
-            ret = mmc_all_send_cid(dev_path, args);
-            break;
-
-        case MMC_SET_RCA:
-            ret = mmc_set_rca(dev_path, args);
-            break;
-            
-        case MMC_STOP_TRANS:
-            ret = mmc_stop_trans(dev_path, args);
-            break;
-            
-        case MMC_BUS_TEST_R:
-            ret = mmc_bus_test_r(dev_path, args);
-            break;
-
-        case MMC_GO_INACTIVE_STATE:
-            ret = mmc_go_inactive_state(dev_path, args);
-            break;
-
-        case MMC_READ_SINGLE_BLOCK:
-            ret = mmc_read_single_block(dev_path, args, output_file_path);
-            break;
-
-        case MMC_SET_BLOCK_COUNT:
-            ret = mmc_set_block_count(dev_path, args);
-            break;
-
-        case MMC_READ_MULTIPLE_BLOCK:
-            ret = mmc_read_multiple_block(dev_path, args, blk_cnt, output_file_path);
-            break;
-            
-        case MMC_WRITE_BLOCK:
-            ret = mmc_write_block(dev_path, args, input_file_path);
-            break;
-            
-        case MMC_WRITE_MULTIPLE_BLOCK:
-            ret = mmc_write_multiple_block(dev_path, args, blk_cnt, input_file_path);
-            break;
-
-        case MMC_ERASE_GROUP_START:
-            ret = mmc_erase_group_start(dev_path, args);
-            break;
-
-        case MMC_ERASE_GROUP_END:
-            ret = mmc_erase_group_end(dev_path,args);
-            break;
-            
-        case MMC_ERASE:
-            ret = mmc_erase(dev_path, args);
-            break;
-
-        case MMC_SET_WRITE_PROT:
-            ret = mmc_set_write_prot(dev_path, args);
-            break;
-
-        case MMC_CLR_WRITE_PROT:
-            ret = mmc_clr_write_prot(dev_path, args);
-            break;
-
-        case MMC_SEND_WRITE_PROT:
-            ret = mmc_send_write_prot(dev_path, args);
-            break;
-
-        case MMC_SEND_WRITE_PROT_TYPE:
-            ret = mmc_send_write_prot_type(dev_path, args);
-            break;
-
-        case MMC_PROGRAM_CSD:
-            ret = mmc_program_csd(dev_path, args, input_file_path);
-            break;
-
-        case MMC_CMD61:
-            ret = mmc_cmd61(dev_path, args, input_file_path);
+        case SD_CMD_STOP_TRANS:
+            ret = sd_stop_trans(dev_path);
             break;
             
         default:
@@ -246,9 +152,9 @@ int main(int argc, char *argv[])
 
 void print_help(void)
 {
-    printf("mmcmd version %s\n", VERSION);
-    printf("Copyright (C) 2015 by lijg\n"
-           "Usage: mmcmd [options] device \n"
+    printf("sdmd version %s\n", VERSION);
+    printf("Copyright (C) 2016 by lijg\n"
+           "Usage: sdcmd [options] device \n"
            "Options\n"
            " -c index      specify command index\n"
            " -o file       specify read command output file\n"
@@ -257,9 +163,9 @@ void print_help(void)
            " -n count      specify multiple read/write command block count\n"
            "\nExample\n"
            "read single block:\n"
-           "./mmcmd -c 17 -a 0 -o out_file /dev/mmcblk0\n"
+           "./sdcmd -c 17 -a 0 -o out_file /dev/mmcblk0\n"
            "write block:\n"
-           "./mmcmd -c 24 -a 0 -i input_file /dev/mmcblk0\n"
+           "./sdcmd -c 24 -a 0 -i input_file /dev/mmcblk0\n"
            );
 
 }

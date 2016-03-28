@@ -18,7 +18,260 @@
 #include "common.h"
 #include "sd_cmd.h"
 #include "sd_misc.h"
-#if 1
+
+#define SD_BLK_SIZE             (512)
+bool issue_sd_cmd(char *dev_path, struct mmc_ioc_cmd *cmd_desc)
+{
+    bool result = true;
+    int dev_fd = open(dev_path, O_RDONLY);
+    
+    if(dev_fd == -1)
+    {
+        perror("open device: ");
+        return false;
+    }
+
+    if(ioctl(dev_fd, MMC_IOC_CMD, cmd_desc) == -1)
+    {
+        perror("ioctl: ");
+        result = false;
+    }
+
+    if(close(dev_fd) == -1)
+    {
+        perror("close device: ");
+        return false;
+    }
+
+    return result;
+    
+}
+
+
+int sd_read_single_block(char *dev_path, uint32_t args, char *out_file_path)
+{
+
+    uint32_t blk_cnt = 1;
+    struct mmc_ioc_cmd cmd_desc;
+    uint32_t blk_size = SD_BLK_SIZE;
+    char *buf = (char *)malloc(blk_size * blk_cnt);
+    FILE *out_file = NULL;
+    
+    if(buf == NULL)
+    {
+        fprintf(stderr, "-%s: %d- fail to malloc memory", __FILE__, __LINE__);
+        return -ENOMEM;
+    }
+    
+    memset(buf, 0, blk_size * blk_cnt);
+    memset(&cmd_desc, 0, sizeof(cmd_desc));   
+
+    
+    cmd_desc.write_flag = SD_DATA_READ;
+    cmd_desc.opcode = SD_CMD_READ_SINGLE_BLK;
+    cmd_desc.arg = args;
+    cmd_desc.flags = MMC_RSP_R1;
+    cmd_desc.blksz = blk_size;
+    cmd_desc.blocks = blk_cnt;
+    mmc_ioc_cmd_set_data(cmd_desc, buf);
+
+    if(issue_sd_cmd(dev_path, &cmd_desc))
+    {
+        fprintf(stdout, "0x%08X\n", cmd_desc.response[0]);
+
+        if(out_file_path == NULL)
+        {
+            return 0;
+        }
+        else
+        {
+            out_file = fopen(out_file_path, "w+");
+        }
+        
+        if(out_file)
+        {
+            if(fwrite(buf, 1, blk_size * blk_cnt, out_file) != blk_size)
+            {
+                fprintf(stderr, "error! write to file\n");
+                fclose(out_file);
+                return -1;
+            }
+            else
+            {
+                fclose(out_file);
+                return 0;
+            }
+        }
+        else
+        {
+            perror("open file: ");
+            return -1;
+        }
+        
+        return 0;
+    }
+    else
+    {
+        fprintf(stderr, "cmd error\n");
+        return -1;
+    }
+    
+    
+}
+
+int sd_read_multiple_block(char *dev_path, uint32_t args, uint32_t rd_blk_cnt, char *out_file_path)
+{
+
+    uint32_t blk_cnt = rd_blk_cnt;    
+    uint32_t blk_size = SD_BLK_SIZE;
+    struct mmc_ioc_cmd cmd_desc;
+    char *buf = (char *)malloc(blk_size * blk_cnt);
+    FILE *out_file = NULL;
+    
+    if(buf == NULL)
+    {
+        fprintf(stderr, "-%s: %d- fail to malloc memory", __FILE__, __LINE__);
+        return -ENOMEM;
+    }
+    
+    memset(buf, 0, blk_size * blk_cnt);
+    memset(&cmd_desc, 0, sizeof(cmd_desc));   
+
+    
+    cmd_desc.write_flag = SD_DATA_READ;
+    cmd_desc.opcode = SD_CMD_READ_MULTIPLE_BLK;
+    cmd_desc.arg = args;
+    cmd_desc.flags = MMC_RSP_R1;
+    cmd_desc.blksz = blk_size;
+    cmd_desc.blocks = blk_cnt;
+    mmc_ioc_cmd_set_data(cmd_desc, buf);
+
+    if(issue_sd_cmd(dev_path, &cmd_desc))
+    {
+        fprintf(stdout, "0x%08X\n", cmd_desc.response[0]);
+
+        if(out_file_path == NULL)
+        {
+            return 0;
+        }
+        else
+        {
+            out_file = fopen(out_file_path, "w+");
+        }
+        
+        if(out_file)
+        {
+            if(fwrite(buf, 1, blk_size * blk_cnt, out_file) != blk_size*blk_cnt)
+            {
+                fprintf(stderr, "error! write to file\n");
+                fclose(out_file);
+                return -1;
+            }
+            else
+            {
+                fclose(out_file);
+                return 0;
+            }
+        }
+        else
+        {
+            perror("open file: ");
+            return -1;
+        }
+        
+        return 0;
+    }
+    else
+    {
+        fprintf(stderr, "cmd error\n");
+        return -1;
+    }
+    
+    
+}
+
+int sd_send_status(char *dev_path, uint32_t args)
+{
+
+    struct mmc_ioc_cmd cmd_desc;
+    memset(&cmd_desc, 0, sizeof(cmd_desc)); 
+    
+    cmd_desc.write_flag = SD_DATA_READ;
+    cmd_desc.opcode = SD_CMD_SEND_STAT;
+    cmd_desc.arg = args;
+    cmd_desc.flags = MMC_RSP_R1;
+    cmd_desc.blksz = 0;
+    cmd_desc.blocks = 0;
+
+     if(issue_sd_cmd(dev_path, &cmd_desc))
+     {
+        fprintf(stdout, "0x%08X\n", cmd_desc.response[0]);
+        return 0;
+     }
+     else
+     {
+        fprintf(stderr, "cmd error\n");
+        return -1;
+     }
+}
+
+
+int sd_stop_trans(char *dev_path)
+{
+
+    struct mmc_ioc_cmd cmd_desc;
+    memset(&cmd_desc, 0, sizeof(cmd_desc)); 
+    
+    cmd_desc.write_flag = SD_DATA_READ;
+    cmd_desc.opcode = SD_CMD_STOP_TRANS;
+    cmd_desc.arg = 0;
+    cmd_desc.flags = MMC_RSP_R1B;
+    cmd_desc.blksz = 0;
+    cmd_desc.blocks = 0;
+
+     if(issue_sd_cmd(dev_path, &cmd_desc))
+     {
+        fprintf(stdout, "0x%08X\n", cmd_desc.response[0]);
+        return 0;
+     }
+     else
+     {
+        fprintf(stderr, "cmd error\n");
+        return -1;
+     }
+}
+
+#if 0
+static bool read_single_block(int fd, uint32_t args, int opcode, uint8_t *buf)
+{
+    int ret = -1;
+    int dev_fd = fd;
+    struct mmc_ioc_cmd cmd_desc;
+        
+    memset(&cmd_desc, 0, sizeof(cmd_desc));   
+    cmd_desc.write_flag = MMC_DATA_READ;
+    cmd_desc.opcode = opcode;
+    cmd_desc.arg = args;
+    cmd_desc.flags = MMC_RSP_R1;
+    cmd_desc.blksz = DEFAULT_BLOCK_SIZE;
+    cmd_desc.blocks = 1;
+    mmc_ioc_cmd_set_data(cmd_desc, buf);
+
+    ret = ioctl(dev_fd, MMC_IOC_CMD, &cmd_desc);
+    
+    if (ret)
+    {
+        perror("ioctl");
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+
+}
+
+
 
 int __send_ext_csd(int fd, uint8_t *ext_csd)
 {
@@ -106,7 +359,7 @@ int __mmc_write_ext_csd(int fd, uint32_t index, uint32_t value)
     return ret;
 }
 
-#endif
+
 
 int mmc_switch(char *dev_path, uint32_t args)
 {
@@ -1598,3 +1851,4 @@ int mmc_cmd61(char *dev_path, uint32_t args, char *file_path)
     return ret;
 }
 
+#endif

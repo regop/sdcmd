@@ -514,9 +514,6 @@ typedef struct __ext_csd
     uint8_t rsvd505_511[6];
 }ext_csd_t;
 
-void decode_device_status(uint32_t *dev_status);
-void decode_csd(uint32_t *resp, FILE* stream);
-void decode_ext_csd(uint8_t *ext_csd_buf, FILE *stream);
-void dump_cmd_desc(struct mmc_ioc_cmd *cmd_desc, FILE* stream);
+
 
 #endif

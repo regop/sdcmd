@@ -95,7 +95,7 @@ void decode_device_status(uint32_t *dev_status)
     
 }
 
-
+#if 0
 void decode_csd(uint32_t *resp, FILE* stream)
 {
 
@@ -263,3 +263,6 @@ void decode_ext_csd(uint8_t *ext_csd_buf, FILE *stream)
     
     
 }
+
+#endif
+
